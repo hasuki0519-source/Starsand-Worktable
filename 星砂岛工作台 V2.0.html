@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>🏝️ 星砂岛工作台 V2.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* ================= 核心配色体系 ================= */
+        :root {
+            --bg-body: #f0eadb;
+            --bg-sidebar: #fefcf5;
+            --bg-content: rgb(247, 243, 223);
+            --text-header: #794f27;
+            --text-body: #725d42;
+            --text-muted: #8a7b66;
+            --border-input: #c4b89e;
+            --shadow-btn: #bdaea0;
+            --accent-mint: #13d1b5;
+            --accent-mint-dark: #0fa38d;
+            --success-green: #6fba2c;
+            /* ✅ 优化字体栈：参考官方 animal-island-ui，加入更完整的中英文字体回退 */
+            --font-family: 'Nunito', 'Noto Sans SC', 'Zen Maru Gothic', 'HarmonyOS Sans SC', 'MiSans', -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            --transition-bounce: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        /* 动森光标 */
+      body, a, button, .nav-item, .collapse-header, textarea {
+    cursor: url('https://raw.githubusercontent.com/guokaigdg/animal-island-ui/main/src/assets/img/cursor/cursor-icon.png') 4 4, auto !important;
+        }
+
+        body {
+            font-family: var(--font-family);
+            font-weight: 500;
+            /* ✅ 添加字体平滑渲染，解决粗细不一问题 */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg-body);
+            color: var(--text-body);
+            background-image:
+                radial-gradient(circle at 15% 25%, rgba(200, 180, 140, 0.15) 0%, transparent 30%),
+                repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(180, 160, 130, 0.03) 8px, rgba(180, 160, 130, 0.03) 10px);
+        }
+
+        /* ================= 加载动画 ================= */
+        #global-loader {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #a2e8c9; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.6s ease-out;
+        }
+        .loader-leaf {
+            width: 60px; height: 60px; background-color: #00bc8c;
+            border-radius: 40px 10px 40px 40px; transform: rotate(-15deg);
+            animation: leafPulse 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+            box-shadow: inset -5px -5px 0 rgba(0,0,0,0.1);
+        }
+        .loader-text {
+            margin-top: 24px; font-size: 18px; font-weight: 800; color: #5a4030;
+            letter-spacing: 2px;
+        }
+        @keyframes leafPulse { 
+            0% { transform: scale(1) rotate(-15deg); } 
+            100% { transform: scale(1.15) rotate(0deg); } 
+        }
+
+        /* 图标动画 */
+        .svg-icon {
+            width: 1.35em; height: 1.35em; vertical-align: middle;
+            margin-right: 8px; flex-shrink: 0;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes iconBounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            30% { transform: translateY(-4px) scale(1.18); }
+            50% { transform: translateY(1px) scale(0.95); }
+        }
+        .nav-item:hover .svg-icon, button:hover .svg-icon { animation: iconBounce 0.55s infinite; }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 280px; background-color: var(--bg-sidebar);
+            border-right: 2px solid #d4cbb8; display: flex; flex-direction: column;
+            z-index: 10; box-shadow: 4px 0 20px rgba(121, 79, 39, 0.05);
+        }
+        .logo {
+            padding: 24px 20px 20px; font-size: 18px; font-weight: 800; color: var(--text-header);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .ac-divider-dashed {
+            width: calc(100% - 40px); height: 0; margin: 0 auto;
+            border-bottom: 2px dashed #c4b89e; flex-shrink: 0;
+        }
+        .sidebar-scroll { flex: 1; overflow-y: auto; padding: 20px 16px; }
+        .sidebar-scroll::-webkit-scrollbar { width: 6px; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: #d4cbb8; border-radius: 10px; }
+
+        /* 折叠面板 */
+        .collapse-panel {
+            border: 2px solid #ede9dc; border-radius: 16px; background: #ffffff;
+            margin-bottom: 16px; overflow: hidden;
+            box-shadow: 0 4px 8px rgba(114, 93, 66, 0.03);
+        }
+        .collapse-header {
+            padding: 14px 16px; display: flex; align-items: center; cursor: pointer;
+            background: #ffffff; user-select: none; border-bottom: 2px solid transparent;
+        }
+        .collapse-panel:not(.is-closed) .collapse-header { border-bottom: 2px solid #fbf9f1; }
+        .collapse-icon-left {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: var(--accent-mint); color: #fff;
+            display: flex; justify-content: center; align-items: center;
+            margin-right: 12px; font-weight: 900; font-size: 16px; line-height: 1;
+        }
+        .collapse-panel.is-closed .collapse-icon-left::after { content: '+'; }
+        .collapse-panel:not(.is-closed) .collapse-icon-left::after { content: '-'; }
+        .collapse-title { flex: 1; color: var(--text-header); font-weight: 800; font-size: 14px; }
+        .collapse-icon-right { width: 18px; height: 18px; fill: var(--accent-mint); transition: opacity 0.3s; }
+        .collapse-panel.is-closed .collapse-icon-right { opacity: 0.3; filter: grayscale(100%); }
+        .collapse-content { 
+            overflow: hidden; transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1); 
+            max-height: 600px; background: #fbf9f1; 
+        }
+        .collapse-panel.is-closed .collapse-content { max-height: 0; }
+        .nav-menu { list-style: none; padding: 6px 0; margin: 0; }
+        .nav-item {
+            display: flex; align-items: center; padding: 0 0 0 16px; margin: 4px 8px; height: 42px;
+            font-size: 13px; font-weight: 700; color: var(--text-muted);
+            border-radius: 12px; transition: var(--transition-bounce); border: 2px solid transparent;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .nav-item:hover { background: #e9eadd; color: var(--text-header); transform: translateX(4px); }
+        .nav-item.active { background: #B7C6E5; color: #1e3a5f; box-shadow: 0 4px 12px rgba(150, 170, 200, 0.3); transform: translateX(6px); }
+
+        /* HUD 时间面板 */
+        .ac-hud-box {
+            display: flex; align-items: center; justify-content: center;
+            background: #ffffff; border: 2px solid #dbd1c1; border-radius: 14px;
+            padding: 12px 18px; box-shadow: 0 4px 0px #eee9da;
+            margin: 16px; flex-shrink: 0;
+        }
+        .ac-hud-left {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding-right: 14px; border-right: 2px solid #eadecc;
+        }
+        .ac-day { font-size: 10px; font-weight: 900; color: #7cb342; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;}
+        .ac-date { font-size: 14px; font-weight: 800; color: #8e7465; }
+        .ac-time {
+            font-size: 32px; font-weight: 900; color: #8e7465;
+            padding-left: 14px; letter-spacing: 2px;
+            /* 移除单独字体设置，继承 body 的字体栈 */
+            line-height: 1;
+        }
+        .sidebar-footer-text {
+            padding: 14px 16px; font-size: 12px; font-weight: 700; color: #9f927d; text-align: center; flex-shrink: 0;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1; padding: 25px 40px; overflow-y: auto; position: relative; z-index: 1;
+        }
+        /* 打字机气泡 */
+        .typewriter-bubble {
+            display: flex; background: #fff; border: 3px solid #ede9dc;
+            border-radius: 20px; padding: 18px 24px; margin-bottom: 25px;
+            box-shadow: 0 6px 16px rgba(114, 93, 66, 0.05); align-items: center; gap: 16px;
+        }
+        .npc-avatar {
+            width: 50px; height: 50px; background: var(--accent-mint); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: inset -4px -4px 0 rgba(0,0,0,0.1); flex-shrink: 0;
+        }
+        .npc-avatar::after {
+            content: ""; display: block; width: 24px; height: 24px; background: #fff;
+            border-radius: 12px 2px 12px 12px; transform: rotate(-15deg);
+        }
+        .tw-content { flex: 1; }
+        .tw-name { font-size: 14px; font-weight: 900; color: var(--accent-mint); margin-bottom: 4px; }
+        .tw-text { font-size: 16px; font-weight: 700; color: var(--text-header); line-height: 1.5; }
+        .tw-cursor { display: inline-block; width: 4px; height: 16px; background: var(--text-header); margin-left: 4px; animation: blink 0.8s infinite; vertical-align: -2px;}
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* Tab 内容 */
+        .tab-content { display: none; max-width: 1400px; margin: 0 auto; animation: acFadeUp 0.4s cubic-bezier(0.22, 0.61, 0.36, 1); }
+        .tab-content.active { display: block; }
+        @keyframes acFadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .card {
+            background: #ffffff; padding: 30px; border-radius: 20px;
+            box-shadow: 0 4px 16px rgba(114, 93, 66, 0.04); margin-bottom: 24px;
+            border: 2px solid #ede9dc;
+        }
+        /* 专门用于 WPS 文档展示的卡片（无内边距） */
+        .wps-card {
+            padding: 0;
+            overflow: hidden;
+        }
+        h2 {
+            color: var(--text-header); font-size: 18px; font-weight: 800;
+            margin-top: 0; margin-bottom: 20px; display: flex; align-items: center; gap: 6px;
+            padding-left: 12px; position: relative;
+        }
+        h2::before { content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 4px; background: var(--accent-mint); border-radius: 4px; }
+        .tip { background: #fbf9f1; border: 2px dashed #dbd1c1; padding: 14px 18px; border-radius: 12px; font-size: 13px; color: var(--text-body); margin-bottom: 20px; }
+        .grid { display: flex; gap: 20px; }
+        .col { flex: 1; display: flex; flex-direction: column; }
+        .label { font-size: 13px; font-weight: 800; color: var(--text-header); margin-bottom: 8px; display: block; }
+        textarea {
+            width: 100%; height: 180px; padding: 14px; background: #fbf9f1;
+            border: 2px solid #eadecc; border-radius: 12px;
+            font-family: 'SF Mono', monospace; font-size: 13px; font-weight: 600; color: var(--text-body); 
+            resize: vertical;
+        }
+        textarea:focus { outline: none; border-color: var(--accent-mint); background: #fff; box-shadow: 0 0 0 4px rgba(19, 209, 181, 0.15); }
+        textarea.readonly { background: #f5f1e6; color: var(--text-muted); cursor: not-allowed; }
+        .btn-wrapper { margin-top: 20px; text-align: center; }
+        button {
+            font-family: var(--font-family); background: #f7f5ee; color: #6a5243;
+            border: 2px solid #ede5cc; padding: 0 32px; height: 46px; font-size: 14px; font-weight: 800;
+            border-radius: 40px; cursor: pointer; box-shadow: 0 5px 0 0 #decba5;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px; 
+            transition: all 0.1s ease;
+        }
+        button:hover { transform: translateY(-1px); box-shadow: 0 6px 0 0 #decba5; background: #fff;}
+        button:active { transform: translateY(5px); box-shadow: 0 0 0 0 transparent; }
+        button.green { background: var(--accent-mint); border-color: #0ebfa5; color: white; box-shadow: 0 5px 0 0 var(--accent-mint-dark); }
+        button.green:hover { background: #15e3c5; box-shadow: 0 6px 0 0 var(--accent-mint-dark); }
+        button.green:active { box-shadow: 0 0 0 0 transparent; }
+        .footer-decoration {
+            position: fixed; left: 280px; right: 0; bottom: 0; width: calc(100% - 280px);
+            pointer-events: none; z-index: 0; opacity: 0.85;
+        }
+        .footer-decoration img { width: 100%; height: auto; display: block; }
+
+        /* 文档卡片下方小字 */
+        .wps-footer-note {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #8a7b66;
+            background: #fefcf5cc;
+            backdrop-filter: blur(2px);
+            padding: 8px 16px;
+            border-radius: 30px;
+            display: inline-block;
+            width: auto;
+        }
+        .note-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="global-loader">
+        <div class="loader-leaf"></div>
+        <div class="loader-text">与星砂终端连线中...</div>
+    </div>
+
+    <div class="sidebar">
+        <div class="logo"><span>🏝️ 星砂岛工作台 V2.0</span></div>
+        <div class="ac-divider-dashed"></div>
+        <div class="sidebar-scroll">
+            <!-- 百科维护工具面板 -->
+            <div class="collapse-panel" id="panel-tools">
+                <div class="collapse-header" onclick="toggleCollapse('panel-tools')">
+                    <div class="collapse-icon-left"></div>
+                    <div class="collapse-title">百科维护工具</div>
+                    <svg class="collapse-icon-right" viewBox="0 0 24 24"><path d="M17.5 2.5c-4.6 0-9.4 2.7-11.4 7C4.6 12.8 4 16.1 4 19.5L5.5 21l3-5.5c1.4.6 3.1.9 4.8.9 5.8 0 10.2-4.5 10.2-10.4 0-1.8-.8-3.5-2.2-3.5H17.5z"/></svg>
+                </div>
+                <div class="collapse-content">
+                    <ul class="nav-menu">
+                        <li class="nav-item active" onclick="switchTab('tab-parser', this)">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2l10 18H2L12 2z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><rect x="9" y="11" width="6" height="6" fill="none" stroke="#fff" stroke-width="1.5"/><path d="M9 14h6 M12 11v6" stroke="#fff" stroke-width="1.5"/></svg>源表配方解析器
+                        </li>
+                        <li class="nav-item" onclick="switchTab('tab-suffix', this)">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="currentColor"/><text x="12" y="16" font-size="9" fill="#fff" font-family="sans-serif" font-weight="bold" text-anchor="middle">PNG</text></svg>道具 ID 补全器
+                        </li>
+                        <li class="nav-item" onclick="switchTab('tab-season', this)">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M12 6 c 3 0 5 2 5 5 c 0 4 -5 7 -5 7 s -5 -3 -5 -7 c 0 -3 2 -5 5 -5 z" fill="none" stroke="#fff" stroke-width="1.5"/></svg>季节转换器
+                        </li>
+                        <li class="nav-item" onclick="switchTab('tab-rarity', this)">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2l10 18H2L12 2z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><path d="M12 8l-2 5h2l-1 4 3-5h-2l1-4z" fill="#fff"/></svg>工艺材料处理器
+                        </li>
+                        <li class="nav-item" onclick="switchTab('tab-product', this)">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="currentColor"/><rect x="8" y="11" width="8" height="6" rx="1" fill="none" stroke="#fff" stroke-width="1.5"/><path d="M9 11 v-2 a3 3 0 0 1 6 0 v2" fill="none" stroke="#fff" stroke-width="1.5"/></svg>养殖副产物解析
+                        </li>
+                        <li class="nav-item" onclick="switchTab('tab-html-gen', this)">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M9 9 l -3 3 l 3 3 M15 9 l 3 3 l -3 3 M13 7 l -2 10" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>HTML 排版生成
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 常用文档面板（含小黑盒SOP） -->
+            <div class="collapse-panel is-closed" id="panel-docs">
+                <div class="collapse-header" onclick="toggleCollapse('panel-docs')">
+                    <div class="collapse-icon-left"></div>
+                    <div class="collapse-title">常用文档</div>
+                    <svg class="collapse-icon-right" viewBox="0 0 24 24"><path d="M17.5 2.5c-4.6 0-9.4 2.7-11.4 7C4.6 12.8 4 16.1 4 19.5L5.5 21l3-5.5c1.4.6 3.1.9 4.8.9 5.8 0 10.2-4.5 10.2-10.4 0-1.8-.8-3.5-2.2-3.5H17.5z"/></svg>
+                </div>
+                <div class="collapse-content">
+                    <ul class="nav-menu">
+                        <li class="nav-item" onclick="switchTab('tab-wps', this); loadWpsDoc('https://365.kdocs.cn/l/ci0ULTjYjwXI')">
+                            <svg class="svg-icon" viewBox="0 0 24 24" width="16" height="16">
+                                <path d="M4 4h16v16H4V4z" fill="currentColor" stroke="#fff" stroke-width="1.5"/>
+                                <path d="M8 8h8M8 12h8M8 16h4" stroke="#fff" stroke-width="1.5"/>
+                            </svg>
+                            小黑盒SOP
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 时间 HUD 面板 -->
+        <div class="ac-hud-box">
+            <div class="ac-hud-left">
+                <div class="ac-day" id="acDay">FRIDAY</div>
+                <div class="ac-date" id="acDate">May 22</div>
+            </div>
+            <div class="ac-time" id="acTime">10:50</div>
+        </div>
+
+        <div class="ac-divider-dashed"></div>
+        <div class="sidebar-footer-text">✦ 星砂岛工作台 · 专属工具 ✦</div>
+    </div>
+
+    <div class="main-content">
+        <div class="typewriter-bubble">
+            <div class="npc-avatar"></div>
+            <div class="tw-content">
+                <div class="tw-name">星砂岛工作台向导</div>
+                <div class="tw-text"><span id="tw-text"></span><span class="tw-cursor"></span></div>
+            </div>
+        </div>
+
+        <!-- 原有工具面板 -->
+        <div id="tab-parser" class="tab-content active">
+            <div class="card">
+                <h2>📦 原始配方解析器</h2>
+                <div class="tip">将游戏导出的<b>原始数组配方</b>粘贴在上方，一键转换为带 <b>mat1_img</b> 等标准表头的多列 Excel 格式。<br>例如：<code>[Item.Production.Plank.Wood_Lv2_6, Item.Production.Sheet.Tiekuangshi_4]</code></div>
+                <span class="label">第一步：粘贴原始配方</span>
+                <textarea id="recipeRawInput" placeholder="在此粘贴原始配方数组，每行一个..."></textarea>
+                <div class="btn-wrapper">
+                    <button class="green" onclick="parseRecipe()">🔧 一键解析为 Excel 列</button>
+                </div>
+                <span class="label" style="display:block; margin-top:16px;">第二步：解析结果</span>
+                <textarea id="recipeRawOutput" class="readonly" readonly placeholder="解析结果将显示在这里..."></textarea>
+            </div>
+        </div>
+        
+        <div id="tab-suffix" class="tab-content">
+            <div class="card">
+                <h2>🖼️ 道具 ID 批量加 .png</h2>
+                <div class="grid">
+                    <div class="col"><span class="label">输入道具ID（每行一个）</span><textarea id="idInput"></textarea><div class="btn-wrapper"><button class="green" onclick="processIds()">补充后缀 .png</button></div></div>
+                    <div class="col"><span class="label">输出结果</span><textarea id="idOutput" class="readonly" readonly></textarea></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="tab-season" class="tab-content">
+            <div class="card">
+                <h2>🌸 种植季节转换器</h2>
+                <div class="grid">
+                    <div class="col"><span class="label">输入原始季节数据</span><textarea id="seasonInput"></textarea><div class="btn-wrapper"><button class="green" onclick="processSeasons()">翻译清洗</button></div></div>
+                    <div class="col"><span class="label">输出结果</span><textarea id="seasonOutput" class="readonly" readonly></textarea></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="tab-rarity" class="tab-content">
+            <div class="card">
+                <h2>🔨 工艺制造材料处理器</h2>
+                <div class="tip">支持自动乱序识别，会自动生成 3 行标准表头（英文/参数/中文）</div>
+                <span class="label">📋 数据库（详见SOP文档复制过来）</span>
+                <textarea id="dbInput" style="height:100px; margin-bottom:18px;" placeholder="粘贴全物品图鉴..."></textarea>
+                <span class="label">📝 待处理：工艺配方材料列</span>
+                <textarea id="recipeInput" style="height:100px;" placeholder="粘贴工艺配方材料列..."></textarea>
+                <div class="btn-wrapper"><button class="green" onclick="bridgeDataPro()">✨ 一键生成矩阵</button></div>
+            </div>
+            <div class="card"><h2>📋 结果提取区</h2><textarea id="outputArea" class="readonly" readonly placeholder="生成结果将显示在这里..."></textarea></div>
+        </div>
+        
+        <div id="tab-product" class="tab-content">
+            <div class="card">
+                <h2>🐄 养殖副产物解析器</h2>
+                <span class="label">📋 数据库（详见SOP复制）</span>
+                <textarea id="dbInputProd" style="height:100px; margin-bottom:18px;" placeholder="物品图鉴贴这里..."></textarea>
+                <span class="label">📝 待处理：动物副产物数组</span>
+                <textarea id="prodInput" style="height:100px;" placeholder="例如[Item.Animal_Product.CNMSaliva,Item.Animal_Product.CNMvillus ...]"></textarea>
+                <div class="btn-wrapper"><button class="green" onclick="parseProducts()">🔍 一键解析矩阵</button></div>
+            </div>
+            <div class="card"><h2>📋 结果提取区</h2><textarea id="prodOutput" class="readonly" readonly placeholder="生成完毕后，粘贴回数据表"></textarea></div>
+        </div>
+
+        <div id="tab-html-gen" class="tab-content">
+            <div class="card">
+                <h2>🎨 HTML 排版生成器</h2>
+                <div class="tip">在 Excel 中确保列顺序为 <b>【名称】 【套装名】 【图片链接】</b>，复制三列数据扔进下方，一键产出维基专用代码！</div>
+                <span class="label">待处理：Excel 数据 (按格式：名称 | 套装 | 图片链接)</span>
+                <textarea id="htmlInput"></textarea>
+                <div class="btn-wrapper"><button class="green" onclick="generateHTML()">✨ 生成 HTML 代码</button></div>
+            </div>
+            <div class="card"><h2>📋 最终代码</h2><textarea id="htmlOutput" class="readonly" readonly></textarea></div>
+        </div>
+
+        <!-- WPS 协作文档嵌入面板（小黑盒SOP） - 使用卡片样式并添加小字 -->
+        <div id="tab-wps" class="tab-content">
+            <div class="card wps-card" style="padding: 0; overflow: hidden;">
+                <iframe id="wpsIframe" src="" width="100%" height="800px" style="min-height: 500px; border: none; display: block;" title="小黑盒SOP文档"></iframe>
+            </div>
+            <div class="note-wrapper">
+                <div class="wps-footer-note">
+                    🌟 小黑盒SOP文档已嵌入星砂岛工作台 | 支持直接查看/协作（取决于WPS分享权限）
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-decoration">
+        <img src="https://guokaigdg.github.io/animal-island-ui/assets/footer-tree-DQEpBJFS.webp" alt="decoration">
+    </div>
+
+    <script>
+        // 加载动画 & 打字机
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loader = document.getElementById('global-loader');
+                loader.style.opacity = '0';
+                setTimeout(() => {
+                    loader.remove();
+                    startTypewriter();
+                }, 600);
+            }, 800);
+        });
+
+        function startTypewriter() {
+            const text = "欢迎使用星砂岛工作台终端！请在左侧面板选择您需要工具";
+            const twBox = document.getElementById('tw-text');
+            let i = 0;
+            function type() {
+                if (i < text.length) {
+                    twBox.innerHTML += text.charAt(i);
+                    i++;
+                    setTimeout(type, 60);
+                }
+            }
+            type();
+        }
+
+        // 时间 HUD（带冒号）
+        function updateACHUD() {
+            const now = new Date();
+            const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const dayEl = document.getElementById('acDay');
+            const dateEl = document.getElementById('acDate');
+            const timeEl = document.getElementById('acTime');
+            if(dayEl) dayEl.textContent = days[now.getDay()];
+            if(dateEl) dateEl.textContent = `${months[now.getMonth()]} ${now.getDate()}`;
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            if(timeEl) timeEl.textContent = `${hh}:${mm}`;
+        }
+        updateACHUD();
+        setInterval(updateACHUD, 1000);
+
+        // 折叠面板
+        function toggleCollapse(panelId) {
+            const panel = document.getElementById(panelId);
+            panel.classList.toggle('is-closed');
+        }
+
+        // 标签页切换
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            if (element) element.classList.add('active');
+        }
+
+        // 加载 WPS 文档
+        function loadWpsDoc(url) {
+            const iframe = document.getElementById('wpsIframe');
+            if (iframe) iframe.src = url;
+        }
+
+        // 工具函数（保持原有逻辑）
+        function parseRecipe() {
+            const lines = document.getElementById('recipeRawInput').value.trim().split('\n');
+            if (!lines[0]) return;
+            let result = "mat1_img\tmat1_num\tmat2_img\tmat2_num\tmat3_img\tmat3_num\tmat4_img\tmat4_num\tmat5_img\tmat5_num\tmat6_img\tmat6_num\tmat7_img\tmat7_num\n";
+            lines.forEach(line => {
+                line = line.trim(); if(!line) return;
+                let items = line.replace(/^\[|\]$/g, '').split(/,\s*/);
+                let rowParts = [];
+                for(let i=0; i<7; i++) {
+                    if(i < items.length && items[i]) {
+                        let itemStr = items[i], lastUnderscore = itemStr.lastIndexOf('_');
+                        if(lastUnderscore !== -1) { rowParts.push(itemStr.substring(0, lastUnderscore) + ".png", itemStr.substring(lastUnderscore + 1)); }
+                        else { rowParts.push(itemStr + ".png", "1"); }
+                    } else { rowParts.push("", ""); }
+                }
+                result += rowParts.join('\t') + '\n';
+            });
+            document.getElementById('recipeRawOutput').value = result;
+        }
+
+        function processIds() { 
+            document.getElementById('idOutput').value = document.getElementById('idInput').value.split('\n').map(l => l.trim() && !l.endsWith('.png') ? l.trim() + ".png" : l.trim()).join('\n'); 
+        }
+
+        function processSeasons() { 
+            document.getElementById('seasonOutput').value = document.getElementById('seasonInput').value.split('\n').map(l => l.trim() ? l.trim().replace(/\[|\]|"/g, '').replace(/Spring/g, '春').replace(/Summer/g, '夏').replace(/Autumn/g, '秋').replace(/Winter/g, '冬').replace(/,/g, '、') : "").join('\n'); 
+        }
+
+        function bridgeDataPro() {
+            const dbText = document.getElementById('dbInput').value.trim();
+            const recipeText = document.getElementById('recipeInput').value.trim();
+            if(!dbText || !recipeText) { alert("⚠️ 请确保数据库和待处理配方都已粘贴数据！"); return; }
+            const dataMap = new Map();
+            dbText.split('\n').forEach(line => {
+                let parts = line.split('\t');
+                if (parts.length < 3) parts = line.trim().split(/\s+/);
+                if(parts.length >= 3) {
+                    let id, name;
+                    let part0 = parts[0].trim(), part1 = parts[1].trim();
+                    if(/^[a-zA-Z]/.test(part0) || part0.includes('.')) { id = part0; name = part1; } else { name = part0; id = part1; }
+                    dataMap.set(id, {name, rarity: parts[parts.length - 1].trim()});
+                }
+            });
+            const recipeLines = recipeText.split('\n');
+            const header = recipeLines[0].split('\t').map(h => h.trim());
+            const targetCols = ['mat1_img', 'mat2_img', 'mat3_img', 'mat4_img', 'mat5_img', 'mat6_img', 'mat7_img', 'tool_img'];
+            const colIndexes = targetCols.map(col => header.indexOf(col));
+            let row1 = [], row2 = [], row3 = [];
+            targetCols.forEach(col => {
+                let base = col.replace('_img', '');
+                row1.push(`${base}_name`, `${base}_rarity`); row2.push("2", "2");
+                row3.push(`${col.includes('mat') ? '材料'+base.replace('mat', '') : '制作工具'}名称`, `${col.includes('mat') ? '材料'+base.replace('mat', '') : '制作工具'}稀有度`);
+            });
+            let result = row1.join('\t') + '\n' + row2.join('\t') + '\n' + row3.join('\t') + '\n';
+            let startIdx = (/[\u4e00-\u9fa5]/.test(recipeLines[2]||'') ? 3 : 1);
+            for(let i = startIdx; i < recipeLines.length; i++) {
+                const row = recipeLines[i].split('\t');
+                let exportRow = [];
+                colIndexes.forEach(idx => {
+                    if(idx !== -1 && row[idx]) {
+                        let rawId = row[idx].trim().replace('.png', '');
+                        let itemData = dataMap.get(rawId);
+                        exportRow.push(itemData?.name || '?未找到', itemData?.rarity || '1');
+                    } else exportRow.push("", "");
+                });
+                result += exportRow.join('\t') + '\n';
+            }
+            document.getElementById('outputArea').value = result;
+        }
+
+        function parseProducts() {
+            const dbText = document.getElementById('dbInputProd').value.trim();
+            const prodText = document.getElementById('prodInput').value.trim();
+            if(!prodText) { alert("⚠️ 请先粘贴待处理的数据！"); return; }
+            const dataMap = new Map();
+            if(dbText) dbText.split('\n').forEach(line => {
+                let parts = line.split('\t');
+                if(parts.length < 3) parts = line.trim().split(/\s+/);
+                if(parts.length >= 3) {
+                    let id, name;
+                    let part0 = parts[0].trim(), part1 = parts[1].trim();
+                    if(/^[a-zA-Z]/.test(part0) || part0.includes('.')) { id = part0; name = part1; } else { name = part0; id = part1; }
+                    dataMap.set(id, {name, rarity: parts[parts.length - 1].trim()});
+                }
+            });
+            let row1 = [], row2 = [], row3 = [];
+            for(let i=1; i<=8; i++) { row1.push(`p${i}_img`,`p${i}_name`,`p${i}_rarity`); row2.push("2","2","2"); row3.push(`产物${i}图片`,`产物${i}名称`,`产物${i}稀有度`); }
+            let result = row1.join('\t')+'\n'+row2.join('\t')+'\n'+row3.join('\t')+'\n';
+            prodText.split('\n').forEach(line => {
+                let text = line.trim(); if(!text) return;
+                let items = text.replace(/^\[|\]$/g,'').replace(/\s/g,'').split(',');
+                let exportRow = [];
+                for(let i=0; i<8; i++) {
+                    if(i < items.length && items[i]) {
+                        let rawId = items[i];
+                        let itemData = dataMap.get(rawId);
+                        exportRow.push(rawId+'.png', itemData?.name||'?漏配数据', itemData?.rarity||'1');
+                    } else exportRow.push("","","");
+                }
+                result += exportRow.join('\t')+'\n';
+            });
+            document.getElementById('prodOutput').value = result;
+        }
+
+        function generateHTML() {
+            const input = document.getElementById('htmlInput').value.trim();
+            if (!input) { alert("⚠️ 忘贴数据啦！请粘贴 Excel 中的【名称 | 套装 | 图片链接】三列。"); return; }
+            const lines = input.split('\n'); const setsMap = new Map(); 
+            lines.forEach(line => {
+                const parts = line.split('\t');
+                if (parts.length >= 3) {
+                    const name = parts[0].trim(); const setName = parts[1].trim() || "未分类套装"; const img = parts[2].trim();
+                    if (!setsMap.has(setName)) { setsMap.set(setName, []); }
+                    setsMap.get(setName).push({ name, img });
+                }
+            });
+            if (setsMap.size === 0) { alert("⚠️ 数据解析失败，请确保是从 Excel 直接复制制表符分隔的三列！"); return; }
+            let outputHTML = "";
+            outputHTML += `\n<style type="text/css">\n  .furniture-grid { padding: 5px !important; overflow: hidden; }\n  .item-box { float: left; height: 85px; width: 65px; margin-bottom: 20px; margin-right: 8px; position: relative; }\n  .item-box a { display: block; position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 10; background: rgba(255, 255, 255, 0); cursor: pointer; }\n  .item-pic { width: 60px; height: 60px; text-align: center; line-height: 60px; }\n  .item-pic img { max-width: 100%; max-height: 100%; vertical-align: middle; pointer-events: none; }\n  .item-box a:hover + .item-pic { transform: scale(1.05); transition: transform 0.15s ease; }\n  .item-name { font-size: 12px; text-align: center; line-height: 1.2; margin-top: 4px; color: #5a4030; }\n  .set-title { font-size: 16px; font-weight: bold; margin-top: 20px; margin-bottom: 10px; border-bottom: 2px solid #ede9dc; padding-bottom: 5px; color: #5a4030; }\n</style>\n\n`;
+            setsMap.forEach((items, setName) => {
+                outputHTML += `\n<div class="set-title">${setName}</div>\n<div class="furniture-grid">\n`;
+                items.forEach(item => {
+                    outputHTML += `  <div class="item-box">\n    <a href="heybox-entry:${item.name}">&nbsp;</a>\n    <div class="item-pic"><img data-width="400" data-height="400" class="lazy" data-original="${item.img}" src="${item.img}" /></div>\n    <div class="item-name">${item.name}</div>\n  </div>\n`;
+                });
+                outputHTML += `</div>\n<div style="clear:both;"></div>\n<hr style="border:none; border-top: 2px dashed #ede9dc;" />\n\n`; 
+            });
+            document.getElementById('htmlOutput').value = outputHTML.trim();
+        }
+    </script>
+</body>
+</html>
